@@ -28,11 +28,18 @@ export function NameEntryForm({
                 }
                 const txHash = drizzleState.transactionStack[transactionStackIdx];
 
-                const item = drizzleState.transactions[
-                    txHash
-                    ];
+                const item = drizzleState.transactions[txHash];
 
-                const newVar = item ? item.status : 'pending';
+                const hasError = Object.keys(drizzleState.transactions)
+                    .find(x => {
+                        if (!x.startsWith('TEMP_')) {
+                            return false;
+                        }
+                        let transaction = drizzleState.transactions[x];
+                        return  transaction.error.message.includes(txHash);
+                    })
+
+                const newVar = hasError ? 'error' : (item ? item.status : 'pending');
                 if (newVar !== 'pending') {
                     clearInterval(interval);
                 }
@@ -97,7 +104,7 @@ export function NameEntryForm({
                                     });
                                 }}>
                                     <div className="columns">
-                                        <div className="column is-8">
+                                        <div className="column">
                                             <div className="field">
                                                 <label className="label" htmlFor="numberOfBlocks">
                                                     Name
@@ -123,40 +130,43 @@ export function NameEntryForm({
                                             </div>
                                         </div>
 
-                                        <div className="column is-4">
-                                            <div className="field">
-                                                <label className="label" htmlFor="numberOfBlocks">
-                                                    Number of blocks
-                                                </label>
+                                        {
+                                            method !== 'cancel' &&
+                                            <div className="column is-4">
+                                                <div className="field">
+                                                    <label className="label" htmlFor="numberOfBlocks">
+                                                        Number of blocks
+                                                    </label>
 
-                                                <div className="control">
-                                                    <input
-                                                        style={{maxWidth: '280px'}}
-                                                        name="expires_after"
-                                                        className="input"
-                                                        required
-                                                        type="number"
-                                                        step="1"
-                                                        min="1"
-                                                        max={max}
-                                                        value={numberOfBlocks}
-                                                        onChange={(event) => {
-                                                            setNumberOfBlocks(
-                                                                `${event.target.value
-                                                                    ? parseInt(event.target.value) * BLOCK_RESERVATION_COST
-                                                                    : 0}`
-                                                            );
-                                                        }}
-                                                    />
+                                                    <div className="control">
+                                                        <input
+                                                            style={{maxWidth: '280px'}}
+                                                            name="expires_after"
+                                                            className="input"
+                                                            required
+                                                            type="number"
+                                                            step="1"
+                                                            min="1"
+                                                            max={max}
+                                                            value={numberOfBlocks}
+                                                            onChange={(event) => {
+                                                                setNumberOfBlocks(
+                                                                    `${event.target.value
+                                                                        ? parseInt(event.target.value) * BLOCK_RESERVATION_COST
+                                                                        : 0}`
+                                                                );
+                                                            }}
+                                                        />
+                                                    </div>
                                                 </div>
-                                            </div>
 
-                                        </div>
+                                            </div>
+                                        }
                                     </div>
 
                                     {
-                                        transactionStatus === 'error' && <div className="has-text-danger">
-                                            Operation failed
+                                        transactionStatus === 'error' && <div className="has-text-danger mb-3">
+                                            Transaction failed
                                         </div>
                                     }
 

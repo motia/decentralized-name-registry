@@ -6,12 +6,20 @@ const {AccountData, ContractData} = newContextComponents;
 
 export default ({drizzle, drizzleState}) => {
     const [blockNumber, setBlockNumber] = useState(0);
+
+    // TODO: replace with subscription
     useEffect(() => {
+        let destroyed = false;
+        drizzle.web3.eth.getBlockNumber().then(
+            (bn) => destroyed ? null : setBlockNumber(bn)
+        );
+
         const interval = setInterval(async () => {
             setBlockNumber(await drizzle.web3.eth.getBlockNumber());
         }, 5000);
 
         return () => {
+            destroyed = true;
             clearInterval(interval);
         }
     }, []);
@@ -93,17 +101,19 @@ export default ({drizzle, drizzleState}) => {
                                                                                 className="has-text-weight-bold has-big-font">
                                                                                 {name}
                                                                             </div>
-                                                                            {/*<div className="has-text-grey has-small-font">*/}
-                                                                            {/*    {item.expires_at}*/}
-                                                                            {/*</div>*/}
+                                                                            <div className="has-text-grey has-small-font">
+                                                                                expires at: {item.expires_at}
+                                                                            </div>
                                                                         </div>
 
                                                                     </div>
 
                                                                     <div className="level-right">
+                                                                        <div className="tags">
+
                                                                         {
                                                                             isRenewable ?
-                                                                            <div className="tag is-info mr-2"
+                                                                            <div className="tag is-info"
                                                                                  onClick={() => {
                                                                                      setNameEntryConfig({
                                                                                          method: 'renew',
@@ -112,7 +122,7 @@ export default ({drizzle, drizzleState}) => {
                                                                                  }}
                                                                             >renew
                                                                             </div> :
-                                                                            <div className="tag is-info mr-2"
+                                                                            <div className="tag is-info"
                                                                                  onClick={() => {
                                                                                      setNameEntryConfig({
                                                                                          method: 'register',
@@ -124,13 +134,22 @@ export default ({drizzle, drizzleState}) => {
                                                                         }
                                                                         {
                                                                             isCancelable &&
-                                                                            <div className="tag is-danger mr-2">cancel
+                                                                            <div className="tag is-danger"
+                                                                                 onClick={() => {
+                                                                                     setNameEntryConfig({
+                                                                                         method: 'cancel',
+                                                                                         initialText: name,
+                                                                                     })
+                                                                                 }}
+                                                                            >cancel
                                                                             </div>
                                                                         }
                                                                         {
                                                                             isExpired &&
-                                                                            <div className="tag mr-2">expired</div>
+                                                                            <div className="tag">expired</div>
                                                                         }
+                                                                        </div>
+
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -155,8 +174,17 @@ export default ({drizzle, drizzleState}) => {
                                         precision={3}
                                     />
                                 </div>
+
                             </div>
 
+                            <div className="card mt-4">
+                                <div className="card-content">
+                                    <div>
+                                        <div className="title is-4 is-marginless">Current block</div>
+                                        <div style={{fontSize: '20px'}}>{blockNumber}</div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
