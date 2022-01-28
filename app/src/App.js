@@ -4,25 +4,28 @@ import { Drizzle } from "@drizzle/store";
 import drizzleOptions from "./drizzleOptions";
 import MyComponent from "./MyComponent";
 import "./App.css";
+import {AppLayout} from "./AppLayout";
 
 const drizzle = new Drizzle(drizzleOptions);
 
 const App = () => {
   return (
     <DrizzleContext.Provider drizzle={drizzle}>
-      <DrizzleContext.Consumer>
-        {drizzleContext => {
-          const { drizzle, drizzleState, initialized } = drizzleContext;
+        <AppLayout>
+            <DrizzleContext.Consumer>
+                {drizzleContext => {
+                    const { drizzle, drizzleState, initialized } = drizzleContext;
 
-          if (!initialized) {
-            return "Loading..."
-          }
+                    if (!initialized) {
+                        return "Loading..."
+                    }
 
-          return (
-            <MyComponent drizzle={drizzle} drizzleState={drizzleState} />
-          )
-        }}
-      </DrizzleContext.Consumer>
+                    return (
+                        <MyComponent drizzle={drizzle} drizzleState={drizzleState} />
+                    )
+                }}
+            </DrizzleContext.Consumer>
+        </AppLayout>
     </DrizzleContext.Provider>
   );
 }
