@@ -3,13 +3,23 @@ pragma solidity >=0.4.21 <0.7.0;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
 
 contract NameRegistry {
     using SafeMath for uint;
 
+    uint constant fee_per_block = 10;
+
     event Registered(address _user, bytes32 _name, uint _expiry_block);
     event Renewed(address _user, bytes32 _name, uint _expiry_block);
     event Canceled(address _user, bytes32 _name, uint _expiry_block, uint _renewed_blocks);
+
+    IERC20 token;
+
+    constructor (IERC20 _token) public {
+        token = _token;
+    }
 
     struct NameEntry {
         bytes32 name;
@@ -52,11 +62,8 @@ contract NameRegistry {
 
         uint new_expires = block.number.add(expires_after);
 
-        // TODO: pay bid
-        //        uint memory bid = expires_after * 1;
-        //        assert_has_enough_balance(msg.sender, bid);
-        //        (bool sent, bytes memory data) = _to.call{value: bid}("");
-
+        uint fee = expires_after.mul(fee_per_block);
+        require(token.transferFrom(msg.sender, address(this), fee), 'no enough tokens for transaction');
 
         name_entry.name = name;
         name_entry.expires_at = new_expires;
@@ -93,6 +100,8 @@ contract NameRegistry {
 
         uint new_expires = old_expires.add(expires_after);
 
+        uint fee = expires_after.mul(fee_per_block);
+        require(token.transferFrom(msg.sender, address(this), fee), 'no enough tokens for transaction');
         name_entry.expires_at = new_expires;
 
         emit Renewed(msg.sender, name, new_expires);
@@ -108,6 +117,7 @@ contract NameRegistry {
 //        require(old_expires > block.number, "Name entry already expired");
 
         uint refunded_blocks = old_expires.sub(block.number);
+        token.transfer(msg.sender, refunded_blocks.mul(fee_per_block));
 
         name_entry.expires_at = block.number;
 

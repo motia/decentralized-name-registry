@@ -3,7 +3,7 @@ import {newContextComponents} from "@drizzle/react-components";
 
 const {ContractForm} = newContextComponents;
 
-const BLOCK_RESERVATION_COST = 1;
+const BLOCK_RESERVATION_COST = 1000;
 
 function capitalize(str) {
     return str.split(' ').map(word => word.charAt(0).toUpperCase() + word.toLowerCase().slice(1)).join(' ');
@@ -44,10 +44,14 @@ export function NameEntryForm({
                     clearInterval(interval);
                 }
                 setTransactionStatus(newVar);
-            }, 3000);
+            }, 1000);
 
             return () => clearInterval(interval);
     }, [drizzleState, transactionStackIdx]);
+
+    const bid = method === 'cancel'
+        ? undefined
+        : numberOfBlocks * BLOCK_RESERVATION_COST;
 
     return <>
         <div className="card mt-4">
@@ -69,7 +73,7 @@ export function NameEntryForm({
                         drizzleState={drizzleState}
                         contract='NameRegistry'
                         method={method}
-                        sendArgs={{value: numberOfBlocks * BLOCK_RESERVATION_COST, gas: 1000 * 1000}}
+                        sendArgs={{value: bid, gas: 1000 * 1000}}
                         render={({inputs, inputTypes, state, handleInputChange, handleSubmit}) => {
                             const max = 100;
 
@@ -152,7 +156,7 @@ export function NameEntryForm({
                                                             onChange={(event) => {
                                                                 setNumberOfBlocks(
                                                                     `${event.target.value
-                                                                        ? parseInt(event.target.value) * BLOCK_RESERVATION_COST
+                                                                        ? parseInt(event.target.value)
                                                                         : 0}`
                                                                 );
                                                             }}
