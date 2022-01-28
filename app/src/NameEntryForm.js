@@ -3,7 +3,7 @@ import {newContextComponents} from "@drizzle/react-components";
 
 const {ContractForm} = newContextComponents;
 
-const BLOCK_RESERVATION_COST = 1000;
+const BLOCK_RESERVATION_COST = 10;
 
 function capitalize(str) {
     return str.split(' ').map(word => word.charAt(0).toUpperCase() + word.toLowerCase().slice(1)).join(' ');
@@ -13,10 +13,12 @@ export function NameEntryForm({
                                   drizzleState,
                                   drizzle,
                                   initialText,
-                                  method
+                                  initialExpiryBlock,
+                                  method,
+                                  currentBlockNumber,
                               }) {
-    const [text, setText] = useState((initialText || '').trim());
-    const [numberOfBlocks, setNumberOfBlocks] = useState('0');
+    const [name, setName] = useState((initialText || '').trim());
+    const [targetExpiryBlock, setTargetExpiryBlock] = useState(`${initialExpiryBlock || 0}`);
     const [transactionStatus, setTransactionStatus] = useState('');
     const [transactionStackIdx, setTransactionStackIdx] = useState(null);
 
@@ -49,9 +51,9 @@ export function NameEntryForm({
             return () => clearInterval(interval);
     }, [drizzleState, transactionStackIdx]);
 
-    const bid = method === 'cancel'
-        ? undefined
-        : numberOfBlocks * BLOCK_RESERVATION_COST;
+    const numberOfBlocks = method === 'cancel'
+        ? (initialExpiryBlock - currentBlockNumber)
+        : (targetExpiryBlock - Math.max(currentBlockNumber, initialExpiryBlock));
 
     return <>
         <div className="card mt-4">
@@ -65,7 +67,7 @@ export function NameEntryForm({
                         ? <div className="message is-success">
                             <div className="message-header">Success</div>
                             <div className="message-body">
-                                Name `{text}` {method}ed successfully
+                                Name `{name}` {method}ed successfully
                             </div>
                         </div>
                     : <ContractForm
@@ -73,44 +75,40 @@ export function NameEntryForm({
                         drizzleState={drizzleState}
                         contract='NameRegistry'
                         method={method}
-                        sendArgs={{value: bid, gas: 1000 * 1000}}
-                        render={({inputs, inputTypes, state, handleInputChange, handleSubmit}) => {
-                            const max = 100;
-
+                        sendArgs={{gas: 1000 * 1000}}
+                        render={({handleInputChange, handleSubmit}) => {
                             return (
                                 <form onSubmit={(e) => {
                                     e.persist();
                                     e.preventDefault();
 
-                                    if (numberOfBlocks > max) {
-                                        return;
-                                    }
-
                                     handleInputChange({
                                         target: {
                                             name: 'name',
                                             type: 'text',
-                                            value: text
+                                            value: name
                                         }
                                     });
 
-                                    handleInputChange({
-                                        target: {
-                                            name: 'expires_after',
-                                            type: 'number',
-                                            value: parseInt(numberOfBlocks)
-                                        }
-                                    });
+                                    if (method !== 'cancel') {
+                                        handleInputChange({
+                                            target: {
+                                                name: 'expires_after',
+                                                type: 'number',
+                                                value: parseInt(targetExpiryBlock) - parseInt(currentBlockNumber)
+                                            }
+                                        });
+                                    }
 
                                     setTimeout(() => {
                                         setTransactionStatus('pending');
                                         setTransactionStackIdx(handleSubmit(e));
                                     });
                                 }}>
-                                    <div className="columns">
+                                    <div className="columns mb-0">
                                         <div className="column">
                                             <div className="field">
-                                                <label className="label" htmlFor="numberOfBlocks">
+                                                <label className="label" htmlFor="targetExpiryBlock">
                                                     Name
                                                 </label>
 
@@ -120,12 +118,12 @@ export function NameEntryForm({
                                                         name="name"
                                                         required
                                                         type="text"
-                                                        value={text}
+                                                        value={name}
                                                         readOnly={!!initialText}
                                                         onChange={(event) => {
                                                             if (initialText) return;
 
-                                                            setText(
+                                                            setName(
                                                                 event.target.value
                                                             );
                                                         }}
@@ -138,7 +136,7 @@ export function NameEntryForm({
                                             method !== 'cancel' &&
                                             <div className="column is-4">
                                                 <div className="field">
-                                                    <label className="label" htmlFor="numberOfBlocks">
+                                                    <label className="label" htmlFor="targetExpiryBlock">
                                                         Number of blocks
                                                     </label>
 
@@ -150,11 +148,10 @@ export function NameEntryForm({
                                                             required
                                                             type="number"
                                                             step="1"
-                                                            min="1"
-                                                            max={max}
-                                                            value={numberOfBlocks}
+                                                            min={Math.max(currentBlockNumber, initialExpiryBlock)}
+                                                            value={targetExpiryBlock}
                                                             onChange={(event) => {
-                                                                setNumberOfBlocks(
+                                                                setTargetExpiryBlock(
                                                                     `${event.target.value
                                                                         ? parseInt(event.target.value)
                                                                         : 0}`
@@ -168,16 +165,19 @@ export function NameEntryForm({
                                         }
                                     </div>
 
+
+                                    <div className='has-text-grey has-small-font mb-3'>
+                                        {method === 'cancel' ? 'Refund' : 'Pay'} {numberOfBlocks*BLOCK_RESERVATION_COST} <span className='has-text-weight-bold'>NBT</span> for {numberOfBlocks} blocks
+                                    </div>
                                     {
                                         transactionStatus === 'error' && <div className="has-text-danger mb-3">
                                             Transaction failed
                                         </div>
                                     }
 
-
                                     <button type="submit"
                                             className={`button is-primary ${transactionStatus === 'pending' ? 'is-loading' : ''}`}
-                                            disabled={numberOfBlocks > max || transactionStatus === 'pending'}
+                                            disabled={numberOfBlocks === 0 || transactionStatus === 'pending'}
                                     >Submit</button>
                                 </form>
                             );
