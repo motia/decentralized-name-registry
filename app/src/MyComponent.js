@@ -80,12 +80,17 @@ export default ({drizzle, drizzleState}) => {
                                                 items.filter(item => item.owner === account)
                                                     .map(item => {
                                                         const name = drizzle.web3.utils.hexToAscii(item.name).replaceAll('\x00', '');
+                                                        const isRenewable = item.expires_at >= blockNumber;
+                                                        const isCancelable = item.expires_at > blockNumber;
+                                                        const isExpired = item.expires_at < blockNumber;
+
                                                         return <div className="card mb-5 renew-card" key={item}>
                                                             <div className="card-content">
                                                                 <div className="level is-mobile">
                                                                     <div className="level-left">
                                                                         <div>
-                                                                            <div className="has-text-weight-bold has-big-font">
+                                                                            <div
+                                                                                className="has-text-weight-bold has-big-font">
                                                                                 {name}
                                                                             </div>
                                                                             {/*<div className="has-text-grey has-small-font">*/}
@@ -96,22 +101,35 @@ export default ({drizzle, drizzleState}) => {
                                                                     </div>
 
                                                                     <div className="level-right">
-                                                                        {item.expires_at > blockNumber
-                                                                            ? <>
-                                                                                <div className="tag is-info mr-2"
-                                                                                     onClick={() => {
-                                                                                         setNameEntryConfig({
-                                                                                             method: 'renew',
-                                                                                             initialText: name,
-                                                                                         })
-                                                                                     }}
-                                                                                >renew
-                                                                                </div>
-                                                                                <div className="tag is-danger">cancel
-                                                                                </div>
-                                                                            </>
-                                                                            :
-                                                                            <div className="tag">expired</div>
+                                                                        {
+                                                                            isRenewable ?
+                                                                            <div className="tag is-info mr-2"
+                                                                                 onClick={() => {
+                                                                                     setNameEntryConfig({
+                                                                                         method: 'renew',
+                                                                                         initialText: name,
+                                                                                     })
+                                                                                 }}
+                                                                            >renew
+                                                                            </div> :
+                                                                            <div className="tag is-info mr-2"
+                                                                                 onClick={() => {
+                                                                                     setNameEntryConfig({
+                                                                                         method: 'register',
+                                                                                         initialText: name,
+                                                                                     })
+                                                                                 }}
+                                                                            >register
+                                                                            </div>
+                                                                        }
+                                                                        {
+                                                                            isCancelable &&
+                                                                            <div className="tag is-danger mr-2">cancel
+                                                                            </div>
+                                                                        }
+                                                                        {
+                                                                            isExpired &&
+                                                                            <div className="tag mr-2">expired</div>
                                                                         }
                                                                     </div>
                                                                 </div>

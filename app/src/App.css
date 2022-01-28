@@ -1,0 +1,12 @@
+.renew-card:hover {
+    background: #efefef;
+    cursor: pointer;
+}
+
+.has-big-font {
+    font-size: 18px;
+}
+
+.has-small-font {
+    font-size: 14px;
+}

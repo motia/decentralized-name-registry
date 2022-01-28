@@ -18,6 +18,29 @@ export function NameEntryForm({
     const [text, setText] = useState((initialText || '').trim());
     const [numberOfBlocks, setNumberOfBlocks] = useState('0');
     const [transactionStatus, setTransactionStatus] = useState('');
+    const [transactionStackIdx, setTransactionStackIdx] = useState(null);
+
+    useEffect(() => {
+            // TODO: use subscription from store instead
+            const interval = setInterval(() => {
+                if (transactionStackIdx === null) {
+                    return;
+                }
+                const txHash = drizzleState.transactionStack[transactionStackIdx];
+
+                const item = drizzleState.transactions[
+                    txHash
+                    ];
+
+                const newVar = item ? item.status : 'pending';
+                if (newVar !== 'pending') {
+                    clearInterval(interval);
+                }
+                setTransactionStatus(newVar);
+            }, 3000);
+
+            return () => clearInterval(interval);
+    }, [drizzleState, transactionStackIdx]);
 
     return <>
         <div className="card mt-4">
@@ -26,123 +49,127 @@ export function NameEntryForm({
                     {capitalize(method)} name
                 </div>
 
-                <ContractForm
-                    drizzle={drizzle}
-                    drizzleState={drizzleState}
-                    contract='NameRegistry'
-                    method={method}
-                    sendArgs={{value: numberOfBlocks * BLOCK_RESERVATION_COST, gas: 1000 * 1000}}
-                    render={({inputs, inputTypes, state, handleInputChange, handleSubmit}) => {
-                        const max = 100;
+                {
+                    transactionStatus === 'success'
+                        ? <div className="message is-success">
+                            <div className="message-header">Success</div>
+                            <div className="message-body">
+                                Name `{text}` {method}ed successfully
+                            </div>
+                        </div>
+                    : <ContractForm
+                        drizzle={drizzle}
+                        drizzleState={drizzleState}
+                        contract='NameRegistry'
+                        method={method}
+                        sendArgs={{value: numberOfBlocks * BLOCK_RESERVATION_COST, gas: 1000 * 1000}}
+                        render={({inputs, inputTypes, state, handleInputChange, handleSubmit}) => {
+                            const max = 100;
 
-                        return (
-                            <form onSubmit={(e) => {
-                                e.persist();
-                                e.preventDefault();
+                            return (
+                                <form onSubmit={(e) => {
+                                    e.persist();
+                                    e.preventDefault();
 
-                                if (numberOfBlocks > max) {
-                                    return;
-                                }
-
-                                handleInputChange({
-                                    target: {
-                                        name: 'name',
-                                        type: 'text',
-                                        value: text
+                                    if (numberOfBlocks > max) {
+                                        return;
                                     }
-                                });
 
-                                handleInputChange({
-                                    target: {
-                                        name: 'expires_after',
-                                        type: 'number',
-                                        value: parseInt(numberOfBlocks)
-                                    }
-                                });
+                                    handleInputChange({
+                                        target: {
+                                            name: 'name',
+                                            type: 'text',
+                                            value: text
+                                        }
+                                    });
 
-                                const listenToTransactionStatus = (transactionStackIdx) => {
-                                    // TODO: use subscription from store instead
-                                    const interval = setInterval(() => {
-                                        const item = drizzleState.transactions[
-                                            drizzleState.transactionStack[transactionStackIdx]
-                                        ];
+                                    handleInputChange({
+                                        target: {
+                                            name: 'expires_after',
+                                            type: 'number',
+                                            value: parseInt(numberOfBlocks)
+                                        }
+                                    });
 
-                                        setTransactionStatus(item.status);
-                                    }, 3000);
-                                }
+                                    setTimeout(() => {
+                                        setTransactionStatus('pending');
+                                        setTransactionStackIdx(handleSubmit(e));
+                                    });
+                                }}>
+                                    <div className="columns">
+                                        <div className="column is-8">
+                                            <div className="field">
+                                                <label className="label" htmlFor="numberOfBlocks">
+                                                    Name
+                                                </label>
 
-                                setTimeout(() => {
-                                    const transactionStackIdx = handleSubmit(e);
+                                                <div className="control">
+                                                    <input
+                                                        className="input"
+                                                        name="name"
+                                                        required
+                                                        type="text"
+                                                        value={text}
+                                                        readOnly={!!initialText}
+                                                        onChange={(event) => {
+                                                            if (initialText) return;
 
-                                    listenToTransactionStatus(transactionStackIdx);
-                                });
-                            }}>
-                                <div className="columns">
-                                    <div className="column is-8">
-                                        <div className="field">
-                                            <label className="label" htmlFor="numberOfBlocks">
-                                                Name
-                                            </label>
-
-                                            <div className="control">
-                                                <input
-                                                    className="input"
-                                                    name="name"
-                                                    required
-                                                    type="text"
-                                                    value={text}
-                                                    readOnly={!!initialText}
-                                                    onChange={(event) => {
-                                                        if (initialText) return;
-
-                                                        setText(
-                                                            event.target.value
-                                                        );
-                                                    }}
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="column is-4">
-                                        <div className="field">
-                                            <label className="label" htmlFor="numberOfBlocks">
-                                                Number of blocks
-                                            </label>
-
-                                            <div className="control">
-                                                <input
-                                                    style={{maxWidth: '280px'}}
-                                                    name="expires_after"
-                                                    className="input"
-                                                    required
-                                                    type="number"
-                                                    step="1"
-                                                    min="1"
-                                                    max={max}
-                                                    value={numberOfBlocks}
-                                                    onChange={(event) => {
-                                                        setNumberOfBlocks(
-                                                            `${event.target.value
-                                                                ? parseInt(event.target.value) * BLOCK_RESERVATION_COST
-                                                                : 0}`
-                                                        );
-                                                    }}
-                                                />
+                                                            setText(
+                                                                event.target.value
+                                                            );
+                                                        }}
+                                                    />
+                                                </div>
                                             </div>
                                         </div>
 
+                                        <div className="column is-4">
+                                            <div className="field">
+                                                <label className="label" htmlFor="numberOfBlocks">
+                                                    Number of blocks
+                                                </label>
+
+                                                <div className="control">
+                                                    <input
+                                                        style={{maxWidth: '280px'}}
+                                                        name="expires_after"
+                                                        className="input"
+                                                        required
+                                                        type="number"
+                                                        step="1"
+                                                        min="1"
+                                                        max={max}
+                                                        value={numberOfBlocks}
+                                                        onChange={(event) => {
+                                                            setNumberOfBlocks(
+                                                                `${event.target.value
+                                                                    ? parseInt(event.target.value) * BLOCK_RESERVATION_COST
+                                                                    : 0}`
+                                                            );
+                                                        }}
+                                                    />
+                                                </div>
+                                            </div>
+
+                                        </div>
                                     </div>
-                                </div>
+
+                                    {
+                                        transactionStatus === 'error' && <div className="has-text-danger">
+                                            Operation failed
+                                        </div>
+                                    }
 
 
-                                <button type="submit" className="button is-primary"
-                                    disabled={numberOfBlocks > max}
-                                >Submit</button>
-                            </form>
-                        );
-                    }}
-                />
+                                    <button type="submit"
+                                            className={`button is-primary ${transactionStatus === 'pending' ? 'is-loading' : ''}`}
+                                            disabled={numberOfBlocks > max || transactionStatus === 'pending'}
+                                    >Submit</button>
+                                </form>
+                            );
+                        }}
+                    />
+                }
             </div>
         </div>
     </>;
