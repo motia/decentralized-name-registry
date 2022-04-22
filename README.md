@@ -1,4 +1,7 @@
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+## Description
+
+The name registration system is permissionless, allowing any user to reserve an unregistered name by locking some deposit called "name-fee" proportional to the time he registers the name.
+
 
 ## Development
 ### Start blockchain
